@@ -1,0 +1,106 @@
+---
+# When this file changes, run 'generate.sh' from
+# https://github.com/coq-community/templates to update the other files.
+fullname: Autosubst
+shortname: autosubst
+organization: coq-community
+community: true
+action: true
+doi: 10.1007/978-3-319-22102-1_24
+
+synopsis: >-
+  Coq library for parallel de Bruijn substitutions
+
+description: |-
+  Autosubst is a library for the Coq proof assistant which
+  provides automation for formalizing syntactic theories with
+  variable binders. Given an inductive definition of syntactic
+  objects in de Bruijn representation augmented with binding
+  annotations, Autosubst synthesizes the parallel substitution
+  operation and automatically proves the basic lemmas about
+  substitutions.
+
+publications:
+- pub_url: https://www.ps.uni-saarland.de/Publications/documents/SchaeferEtAl_2015_Autosubst_-Reasoning.pdf
+  pub_title: 'Autosubst: Reasoning with de Bruijn Terms and Parallel Substitutions'
+  pub_doi: 10.1007/978-3-319-22102-1_24
+
+authors:
+- name: Steven Schäfer
+  initial: true
+- name: Tobias Tebbi
+  initial: true
+
+maintainers:
+- name: Ralf Jung
+  nickname: RalfJung
+- name: Dan Frumin
+  nickname: co-dan
+
+opam-file-maintainer: palmskog@gmail.com
+
+opam-file-version: dev
+
+license:
+  fullname: MIT License
+  identifier: MIT
+
+supported_coq_versions:
+  text: 8.14 or later
+  opam: '{(>= "8.14" & < "8.21~") | (= "dev")}'
+
+tested_coq_opam_versions:
+- version: 'coq-dev'
+  repo: 'mathcomp/mathcomp-dev'
+- version: '2.2.0-coq-8.19'
+  repo: 'mathcomp/mathcomp'
+- version: '2.1.0-coq-8.18'
+  repo: 'mathcomp/mathcomp'
+- version: '2.0.0-coq-8.17'
+  repo: 'mathcomp/mathcomp'
+- version: '1.17.0-coq-8.17'
+  repo: 'mathcomp/mathcomp'
+- version: '1.16.0-coq-8.17'
+  repo: 'mathcomp/mathcomp'
+- version: '1.15.0-coq-8.16'
+  repo: 'mathcomp/mathcomp'
+- version: '1.14.0-coq-8.15'
+  repo: 'mathcomp/mathcomp'
+- version: '1.13.0-coq-8.15'
+  repo: 'mathcomp/mathcomp'
+- version: '1.12.0-coq-8.14'
+  repo: 'mathcomp/mathcomp'
+
+namespace: Autosubst
+
+keywords:
+- name: abstract syntax
+- name: binders
+- name: de Bruijn indices
+- name: substitution
+
+categories:
+- name: Computer Science/Lambda Calculi
+
+documentation: |
+  To build the examples that do not need ssreflect, type
+  ```
+  make examples-plain
+  ```
+
+  The examples that depend on ssreflect are built with
+  ```
+  make examples-ssr
+  ```
+
+  To build the documentation (including all examples), type
+  ```
+  make doc
+  ```
+
+  You can use the file `doc/toc.html` to browse the documentation.
+
+  ## Bug Reports
+
+  Please submit bugs reports on https://github.com/coq-community/autosubst/issues
+---
