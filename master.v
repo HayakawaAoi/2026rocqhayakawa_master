@@ -1630,12 +1630,12 @@ Definition X_step (X : ER) (q : quadraple) : Prop :=
     X_step_quad X q \/ X_arrow_tvr X q.
 
 
-Definition environmental_bisimulation_quadraple (X : ER) (a : slabel) (e : elm) : Prop :=
+Definition environmental_simulation_quadraple (X : ER) (a : slabel) (e : elm) : Prop :=
     forall (q : quadraple), 
         e = elm_quad q ->
         (X_step (X_if_closure X a)) q.
 
-Definition environmental_bisimulation_R_bool (R : TVR) (a : slabel) : Prop :=
+Definition environmental_simulation_R_bool (R : TVR) (a : slabel) : Prop :=
     forall (r : tvr_elm),
         R r ->
     exists (l : slabel),
@@ -1643,7 +1643,7 @@ Definition environmental_bisimulation_R_bool (R : TVR) (a : slabel) : Prop :=
         (conf l) <=lv (conf a) /\
         unlabeled_value r.(tri).(V1) = unlabeled_value r.(tri).(V2).
 
-Definition environmental_bisimulation_R_int (R : TVR) (a : slabel) : Prop :=
+Definition environmental_simulation_R_int (R : TVR) (a : slabel) : Prop :=
     forall (r1 r2 : tvr_elm),
         if_closure R a r1 ->
         if_closure R a r2 ->
@@ -1662,7 +1662,7 @@ Definition environmental_bisimulation_R_int (R : TVR) (a : slabel) : Prop :=
             r.(tri).(Rtype) = [Int @ty (l1'' |_| l2'' |_| {Low, e})] ->
             if_closure R a r.
 
-Definition environmental_bisimulation_R_label (R : TVR) (a : slabel) : Prop :=
+Definition environmental_simulation_R_label (R : TVR) (a : slabel) : Prop :=
     forall (r : tvr_elm),
         R r ->
     exists (u : utype) (l : slabel) (r0 : tvr_elm),
@@ -1674,7 +1674,7 @@ Definition environmental_bisimulation_R_label (R : TVR) (a : slabel) : Prop :=
             r0.(tri).(Rtype) = [u @ty {c, integ l}] ->
             if_closure R a r0.
 
-Definition environmental_bisimulation_R_pair (R : TVR) (a : slabel) : Prop :=
+Definition environmental_simulation_R_pair (R : TVR) (a : slabel) : Prop :=
     forall (r : tvr_elm),
         R r ->
     exists (s1 s2 : stype) (l'' : slabel),
@@ -1693,7 +1693,7 @@ Definition environmental_bisimulation_R_pair (R : TVR) (a : slabel) : Prop :=
         if_closure R a r1 /\
         if_closure R a r2.
         
-Definition environmental_bisimulation_R_fun (X : ER) (R : TVR) (a : slabel) : Prop :=
+Definition environmental_simulation_R_fun (X : ER) (R : TVR) (a : slabel) : Prop :=
     forall (r : tvr_elm),
         R r ->
     exists (s1 s2 : stype) (l'' : slabel),
@@ -1708,18 +1708,47 @@ Definition environmental_bisimulation_R_fun (X : ER) (R : TVR) (a : slabel) : Pr
             q.(quad).(Xtype) = s2 ->
             X_arrow (X_if_closure X a) q.
 
-Definition environmental_bisimulation_R (X : ER) (a : slabel) (e : elm) : Prop :=
+Definition environmental_simulation_R (X : ER) (a : slabel) (e : elm) : Prop :=
     forall (R : TVR),
         e = elm_R R ->
-        environmental_bisimulation_R_bool R a /\
-        environmental_bisimulation_R_int R a /\
-        environmental_bisimulation_R_label R a /\
-        environmental_bisimulation_R_pair R a /\
-        environmental_bisimulation_R_fun X R a.
+        environmental_simulation_R_bool R a /\
+        environmental_simulation_R_int R a /\
+        environmental_simulation_R_label R a /\
+        environmental_simulation_R_pair R a /\
+        environmental_simulation_R_fun X R a.
 
 (* Definition 15 *)
-Definition environmental_bisimulation (X : ER) (a : slabel) : Prop :=
+Definition environmental_simulation (X : ER) (a : slabel) : Prop :=
     forall (e : elm),
         X e ->
-        environmental_bisimulation_quadraple X a e \/
-        environmental_bisimulation_R X a e.
+        environmental_simulation_quadraple X a e \/
+        environmental_simulation_R X a e.
+
+Definition inversion_TVR (R : TVR) (r : tvr_elm) : Prop :=
+    exists (r0 : tvr_elm),
+        R r0 /\ 
+        r.(tri).(V1) = r0.(tri).(V2) /\
+        r.(tri).(V2) = r0.(tri).(V1) /\
+        r.(tri).(Rtype) = r0.(tri).(Rtype).
+
+Definition inversion_ER (X : ER) (e : elm) : Prop :=
+    (
+        forall (R : TVR),
+            e = elm_R R ->
+                exists (R0 : TVR),
+                    X (elm_R R0) /\ R = inversion_TVR R0
+    ) \/
+    (
+        forall (q : quadraple),
+            e = elm_quad q ->
+                exists (q0 : quadraple),
+                    X (elm_quad q0) /\
+                    q.(quad).(Rx) = q0.(quad).(Rx) /\
+                    q.(quad).(M1) = q0.(quad).(M2) /\
+                    q.(quad).(M2) = q0.(quad).(M1) /\
+                    q.(quad).(Xtype) = q0.(quad).(Xtype)
+    ).
+
+Definition environmental_bisimulation (X : ER) (a : slabel) : Prop :=
+    environmental_simulation X a /\
+    environmental_simulation (inversion_ER X) a.
