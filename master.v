@@ -727,7 +727,7 @@ Qed.
 
 (* Definitions of closures *)
 
-Record tvr_raw :=
+Record tvr_elm_raw :=
     {
         V1      : tm;
         V2      : tm;
@@ -741,7 +741,7 @@ Check
         Rtype := [Bool @ty {High, High}]    
     |}.
 
-Definition condition_tvr (r : tvr_raw) : Prop :=
+Definition condition_tvr (r : tvr_elm_raw) : Prop :=
     value r.(V1) /\
     value r.(V2) /\
     empty_gamma |- {High, High}, r.(V1) :t r.(Rtype) /\
@@ -749,15 +749,15 @@ Definition condition_tvr (r : tvr_raw) : Prop :=
 
 
 (* Definition 5 *)
-Record tvr :=
+Record tvr_elm :=
     {
-        tri         : tvr_raw;
+        tri         : tvr_elm_raw;
         Rcondition  : condition_tvr tri
     }.
 
-Check tvr.
+Check tvr_elm.
 
-Example tvr_1 : tvr.
+Example tvr_elm_1 : tvr_elm.
 Proof.
     refine 
     {|
@@ -775,12 +775,12 @@ Proof.
         apply t_true. apply integ_le_HH.
 Qed.
 
-Check Rcondition tvr_1.
+Check Rcondition tvr_elm_1.
 
-Print tvr_1.
+Print tvr_elm_1.
 
 (* Typed value relation *)
-Definition R : Type := tvr -> Prop.
+Definition TVR : Type := tvr_elm -> Prop.
 
 
 Definition value_label (v : tm) : slabel :=
@@ -833,7 +833,7 @@ Proof.
     -   inversion H.
 Qed.
 
-Lemma env_label_relation : forall (R : R) (r : tvr),
+Lemma env_label_relation : forall (R : TVR) (r : tvr_elm),
     R r ->
     forall (u : utype) (l : slabel), r.(tri).(Rtype) = [u @ty l] ->
     value_label (r.(tri).(V1)) <=l l /\ (value_label (r.(tri).(V2))) <=l l.
@@ -850,7 +850,7 @@ Qed.
 
 Record quadraple_raw :=
     {
-        Rx      : R;
+        Rx      : TVR;
         M1      : tm;
         M2      : tm;
         Xtype   : stype;
@@ -869,10 +869,10 @@ Record quadraple :=
     }.
 
 Inductive elm : Type :=
-    | elm_tvr   : R -> elm
+    | elm_R     : TVR -> elm
     | elm_quad  : quadraple -> elm.
 
-Definition X : Type := elm -> Prop.
+Definition ER : Type := elm -> Prop.
 
 
 Definition unlabeled_value (v : tm) : (slabel -> tm) :=
@@ -898,13 +898,13 @@ Definition type_label_le (s1 s2 : stype) : Prop :=
         u1 = u2 /\
         l1 <=l l2.
 
-Definition u_condition (r : tvr_raw) : Prop :=
+Definition u_condition (r : tvr_elm_raw) : Prop :=
     forall (u : utype) (l : slabel),
         r.(Rtype) = [u @ty l] /\
         value_label r.(V1) <=l l /\
         value_label r.(V2) <=l l.
 
-Definition tvr_le  (r1 r2 : tvr_raw) : Prop :=
+Definition tvr_le  (r1 r2 : tvr_elm_raw) : Prop :=
     value_label_le r1.(V1) r2.(V1) /\
     value_label_le r1.(V2) r2.(V2) /\
     type_label_le r1.(Rtype) r2.(Rtype) /\
@@ -914,8 +914,8 @@ Notation "R1 '<=r' R2" := (tvr_le R1 R2) (at level 10).
 
 
 (* Definition 8 *)
-Definition upward_closure_raw (R : R) (r' : tvr_raw) : Prop :=
-    exists (r : tvr),
+Definition upward_closure_raw (R : TVR) (r' : tvr_elm_raw) : Prop :=
+    exists (r : tvr_elm),
         R r /\ r.(tri) <=r r'.
 
 Lemma destruct_value : forall (v : tm),
@@ -992,7 +992,7 @@ Qed.
 
 
 (* Lemma 9 *)
-Lemma Rup_is_R : forall (R : R) (r' : tvr_raw),
+Lemma Rup_is_R : forall (R : TVR) (r' : tvr_elm_raw),
     upward_closure_raw R r' ->
     condition_tvr r'.
 Proof.
@@ -1051,19 +1051,19 @@ Proof.
                     apply ut_subtyping_refl.
 Qed.
 
-Definition build_upward_tvr (R : R) (r : tvr) (r' : tvr_raw) (H_R : R r) (H_le : r.(tri) <=r r') : tvr :=
+Definition build_upward_tvr (R : TVR) (r : tvr_elm) (r' : tvr_elm_raw) (H_R : R r) (H_le : r.(tri) <=r r') : tvr_elm :=
     {|
         tri := r';
         Rcondition := Rup_is_R R r' (ex_intro (fun r0 => R r0 /\ r0.(tri) <=r r') r (conj H_R H_le))
     |}.
 
-Definition upward_closure (R : R) (r : tvr) : Prop :=
-    exists (r0 : tvr) 
+Definition upward_closure (R : TVR) (r : tvr_elm) : Prop :=
+    exists (r0 : tvr_elm) 
     (H : R r0) (H' : r0.(tri) <=r r.(tri)),
     r.(tri) = (build_upward_tvr R r0 r.(tri) H H').(tri).
 
 
-Definition S_context_closure_raw (R : R) (a : slabel) (r' : tvr_raw) :=
+Definition S_context_closure_raw (R : TVR) (a : slabel) (r' : tvr_elm_raw) :=
 	exists (gamma : var -> option stype) (sigma sigma' : var -> tm) (D : tm) (s : stype),
 		value_context D /\
 		subst_typing gamma empty_gamma sigma {High, High} /\
@@ -1078,7 +1078,7 @@ Definition S_context_closure_raw (R : R) (a : slabel) (r' : tvr_raw) :=
 		) /\
 		r' = {| V1 := D.[sigma]; V2 := D.[sigma']; Rtype := s |}.
 
-Lemma S_context_closure_is_R : forall (R : R) (a : slabel) (r' : tvr_raw),
+Lemma S_context_closure_is_R : forall (R : TVR) (a : slabel) (r' : tvr_elm_raw),
     S_context_closure_raw R a r' ->
     condition_tvr r'.
 Proof.
@@ -1100,7 +1100,7 @@ Proof.
 Qed.
 
 Definition build_context_tvr 
-    (R : R) (a : slabel) (r' : tvr_raw) (gamma : var -> option stype) (sigma sigma' : var -> tm) (D : tm) (s : stype)
+    (R : TVR) (a : slabel) (r' : tvr_elm_raw) (gamma : var -> option stype) (sigma sigma' : var -> tm) (D : tm) (s : stype)
     (Hc     : value_context D)
     (Hst1   : subst_typing gamma empty_gamma sigma {High, High})
     (Hst2   : subst_typing gamma empty_gamma sigma' {High, High})
@@ -1111,7 +1111,7 @@ Definition build_context_tvr
 				value v /\ value v' /\
 				upward_closure_raw R {|V1 := v; V2 := v'; Rtype := s|})
     (He    : r' = {| V1 := D.[sigma]; V2 := D.[sigma']; Rtype := s |}) 
-    : tvr :=
+    : tvr_elm :=
     {|
         tri := r';
         Rcondition := S_context_closure_is_R R a r' 
@@ -1124,7 +1124,7 @@ Definition build_context_tvr
             )))))
     |}.
 
-Definition S_context_closure (R : R) (a : slabel) (r : tvr) : Prop :=
+Definition S_context_closure (R : TVR) (a : slabel) (r : tvr_elm) : Prop :=
     exists (gamma : var -> option stype) (sigma sigma' : var -> tm) (D : tm) (s : stype)
         (Hc     : value_context D)
         (Hst1   : subst_typing gamma empty_gamma sigma {High, High})
@@ -1140,7 +1140,7 @@ Definition S_context_closure (R : R) (a : slabel) (r : tvr) : Prop :=
 
 
 (* Definition 10 *)
-Definition context_closure (R : R) (a : slabel) : tvr -> Prop :=
+Definition context_closure (R : TVR) (a : slabel) : tvr_elm -> Prop :=
     upward_closure (S_context_closure R a).
 
 
@@ -1156,7 +1156,7 @@ Proof.
     destruct v; inversion H; simpl; eauto using value.
 Qed.
 
-Definition S_if_closure_raw_right (R : R) (a : slabel) (r' : tvr_raw) : Prop :=
+Definition S_if_closure_raw_right (R : TVR) (a : slabel) (r' : tvr_elm_raw) : Prop :=
     exists (v v' w w' dw dw' : tm) (u : utype) (l lb : slabel),
     (value v /\ value v') /\
     (value w /\ value w') /\
@@ -1167,7 +1167,7 @@ Definition S_if_closure_raw_right (R : R) (a : slabel) (r' : tvr_raw) : Prop :=
     (upward_closure_raw (S_context_closure R a)) {| V1 := dw'; V2 := w'; Rtype := [u @ty l]|} /\
     r' = {| V1 := value_label_shift w (value_label v); V2 := value_label_shift w' (value_label v'); Rtype := [u @ty (l |_| lb)]|}.
 
-Lemma S_if_closure_raw_right_is_R : forall (R : R) (a : slabel) (r' : tvr_raw),
+Lemma S_if_closure_raw_right_is_R : forall (R : TVR) (a : slabel) (r' : tvr_elm_raw),
     S_if_closure_raw_right R a r' ->
     condition_tvr r'.
 Proof.
@@ -1183,8 +1183,8 @@ Proof.
     -   split.
         +   apply value_label_shift_value. apply H2R.
         +   split.
-            *   destruct (Rup_is_R R0 {| V1 := v; V2 := v'; Rtype := [Bool @ty lb] |} H3) as [_ [_ [H33 _]]].
-                destruct (Rup_is_R (S_context_closure R0 a) {| V1 := w; V2 := dw; Rtype := [u @ty l] |} H6) as [_ [_ [H63 _]]].
+            *   destruct (Rup_is_R R {| V1 := v; V2 := v'; Rtype := [Bool @ty lb] |} H3) as [_ [_ [H33 _]]].
+                destruct (Rup_is_R (S_context_closure R a) {| V1 := w; V2 := dw; Rtype := [u @ty l] |} H6) as [_ [_ [H63 _]]].
                 simpl in *.
                 assert (Hvlb : (value_label v) <=l lb).
                 {
@@ -1203,8 +1203,8 @@ Proof.
                 rewrite (join_comm l lb).
                 apply monotonicity_join. apply Hvlb.
                 apply ut_subtyping_refl.
-            *   destruct (Rup_is_R R0 {| V1 := v; V2 := v'; Rtype := [Bool @ty lb] |} H3) as [_ [_ [_ H34]]].
-                destruct (Rup_is_R (S_context_closure R0 a) {| V1 := dw'; V2 := w'; Rtype := [u @ty l] |} H7) as [_ [_ [_ H74]]].
+            *   destruct (Rup_is_R R {| V1 := v; V2 := v'; Rtype := [Bool @ty lb] |} H3) as [_ [_ [_ H34]]].
+                destruct (Rup_is_R (S_context_closure R a) {| V1 := dw'; V2 := w'; Rtype := [u @ty l] |} H7) as [_ [_ [_ H74]]].
                 simpl in *.
                 assert (Hv'lb : (value_label v') <=l lb).
                 {
@@ -1226,7 +1226,7 @@ Proof.
 Qed.
 
 Definition build_if_tvr 
-    (R : R) (a : slabel) (r' : tvr_raw) (v v' w w' dw dw' : tm) (u : utype) (l lb : slabel)
+    (R : TVR) (a : slabel) (r' : tvr_elm_raw) (v v' w w' dw dw' : tm) (u : utype) (l lb : slabel)
     (Hv     : value v /\ value v')
     (Hw     : value w /\ value w')
     (Hvr    : (upward_closure_raw R) {| V1 := v; V2 := v'; Rtype := [Bool @ty lb] |})
@@ -1235,7 +1235,7 @@ Definition build_if_tvr
     (Hwctx  : (upward_closure_raw (S_context_closure R a)) {| V1 := w; V2 := dw; Rtype := [u @ty l]|})
     (Hw'ctx : (upward_closure_raw (S_context_closure R a)) {| V1 := dw'; V2 := w'; Rtype := [u @ty l]|})
     (He     : r' = {| V1 := value_label_shift w (value_label v); V2 := value_label_shift w' (value_label v'); Rtype := [u @ty (l |_| lb)]|})
-    : tvr :=
+    : tvr_elm :=
     {|
         tri := r';
         Rcondition :=
@@ -1247,7 +1247,7 @@ Definition build_if_tvr
             ))))))))
     |}.
 
-Definition S_if_closure_right (R : R) (a : slabel) (r : tvr) : Prop :=
+Definition S_if_closure_right (R : TVR) (a : slabel) (r : tvr_elm) : Prop :=
     exists (v v' w w' dw dw' : tm) (u : utype) (l lb : slabel)
         (Hv     : value v /\ value v')
         (Hw     : value w /\ value w')
@@ -1259,16 +1259,16 @@ Definition S_if_closure_right (R : R) (a : slabel) (r : tvr) : Prop :=
         (He     : r.(tri) = {| V1 := value_label_shift w (value_label v); V2 := value_label_shift w' (value_label v'); Rtype := [u @ty (l |_| lb)]|}),
     r.(tri) = (build_if_tvr R a r.(tri) v v' w w' dw dw' u l lb Hv Hw Hvr Hneq Hnle Hwctx Hw'ctx He).(tri).
 
-Definition S_if_closure (R : R) (a : slabel) (r : tvr) : Prop :=
+Definition S_if_closure (R : TVR) (a : slabel) (r : tvr_elm) : Prop :=
     (R r) \/ (S_if_closure_right R a r).
 
 
 (* Definition 12 *)
-Definition if_closure (R : R) (a : slabel) : tvr -> Prop :=
+Definition if_closure (R : TVR) (a : slabel) : tvr_elm -> Prop :=
     context_closure (S_if_closure R a) a.
 
 
-Definition X_arrow_quad (X : X) (q : quadraple) : Prop :=
+Definition X_arrow_quad (X : ER) (q : quadraple) : Prop :=
     exists (q' : quadraple_raw) (q0 : quadraple)
     (Hx     : X (elm_quad q0))
     (Ht     : q'.(Xtype) = q0.(quad).(Xtype))
@@ -1282,11 +1282,11 @@ Definition X_arrow_quad (X : X) (q : quadraple) : Prop :=
             Xcondition := conj Hty1 Hty2
         |}.(quad).
 
-Definition X_arrow_tvr (X : X) (q : quadraple) : Prop :=
-    exists (R : R) (r : tvr) (q' : quadraple_raw)
-    (HXR    : X (elm_tvr R))
+Definition X_arrow_tvr (X : ER) (q : quadraple) : Prop :=
+    exists (R : TVR) (r : tvr_elm) (q' : quadraple_raw)
+    (HXR    : X (elm_R R))
     (HRr    : R r)
-    (HXRx   : X (elm_tvr q'.(Rx)))
+    (HXRx   : X (elm_R q'.(Rx)))
     (Ht     : q'.(Xtype) = r.(tri).(Rtype))
     (Hty1   : empty_gamma |- {High, High}, q'.(M1) :t q'.(Xtype))
     (Hty2   : empty_gamma |- {High, High}, q'.(M2) :t q'.(Xtype))
@@ -1298,15 +1298,15 @@ Definition X_arrow_tvr (X : X) (q : quadraple) : Prop :=
             Xcondition := conj Hty1 Hty2
         |}.(quad).
 
-Definition X_arrow (X : X) (q : quadraple) : Prop :=
+Definition X_arrow (X : ER) (q : quadraple) : Prop :=
     X_arrow_quad X q \/ X_arrow_tvr X q.
 
 
-Definition condition_tvr_weak (r' : tvr_raw) : Prop :=
+Definition condition_tvr_weak (r' : tvr_elm_raw) : Prop :=
     empty_gamma |- {High, High}, r'.(V1) :t r'.(Rtype) /\
     empty_gamma |- {High, High}, r'.(V2) :t r'.(Rtype).
 
-Definition if_closure_tm (R : R) (a : slabel) (r' : tvr_raw) : Prop :=
+Definition if_closure_tm (R : TVR) (a : slabel) (r' : tvr_elm_raw) : Prop :=
     exists (gamma gamma0 : var -> option stype) (sigma sigma' sigma0 sigma0' : var -> tm) (C : tm) (s: stype),
         subst_typing gamma gamma0 sigma {High, High} /\
         subst_typing gamma gamma0 sigma' {High, High} /\
@@ -1322,7 +1322,7 @@ Definition if_closure_tm (R : R) (a : slabel) (r' : tvr_raw) : Prop :=
         (
             forall (x : var) (s : stype),
                 gamma0 x = Some s ->
-                exists (v v' : tm) (u : utype) (l l'' : slabel) (r r0 : tvr),
+                exists (v v' : tm) (u : utype) (l l'' : slabel) (r r0 : tvr_elm),
                     upward_closure_raw R {|V1 := v; V2 := v'; Rtype := [Bool @ty l'']|} /\
                     unlabeled_value v <> unlabeled_value v' /\
                     ~ (conf l'') <=lv (conf a) /\
@@ -1335,7 +1335,7 @@ Definition if_closure_tm (R : R) (a : slabel) (r' : tvr_raw) : Prop :=
         ) /\
         r' = {|V1 := (C.[sigma]).[sigma0]; V2 := (C.[sigma']).[sigma0']; Rtype := s|}.
 
-Lemma condition_if_closure_tm : forall (R : R) (a : slabel) (r' : tvr_raw),
+Lemma condition_if_closure_tm : forall (R : TVR) (a : slabel) (r' : tvr_elm_raw),
     if_closure_tm R a r' ->
     condition_tvr_weak r'.
 Proof.
@@ -1361,11 +1361,11 @@ Proof.
     -   apply H0.   
 Qed.
 
-Definition condition_tvr_weak_ctx (s : stype) (r' : tvr_raw) : Prop :=
+Definition condition_tvr_weak_ctx (s : stype) (r' : tvr_elm_raw) : Prop :=
     (Some s .: empty_gamma) |- {High, High}, r'.(V1) :t r'.(Rtype) /\
     (Some s .: empty_gamma) |- {High, High}, r'.(V2) :t r'.(Rtype).
 
-Definition if_closure_e_ctx (R : R) (a : slabel) (t : stype) (r' : tvr_raw) : Prop :=
+Definition if_closure_e_ctx (R : TVR) (a : slabel) (t : stype) (r' : tvr_elm_raw) : Prop :=
     exists (gamma gamma0 : var -> option stype) (sigma sigma' sigma0 sigma0' : var -> tm) (C : tm) (s: stype) (E E' : e_ctx),
         subst_typing gamma gamma0 (up sigma) {High, High} /\
         subst_typing gamma gamma0 (up sigma') {High, High} /\
@@ -1382,7 +1382,7 @@ Definition if_closure_e_ctx (R : R) (a : slabel) (t : stype) (r' : tvr_raw) : Pr
         (
             forall (x : var) (s : stype),
                 gamma0 x = Some s ->
-                exists (v v' : tm) (u : utype) (l l'' : slabel) (r r0 : tvr),
+                exists (v v' : tm) (u : utype) (l l'' : slabel) (r r0 : tvr_elm),
                     upward_closure_raw R {|V1 := v; V2 := v'; Rtype := [Bool @ty l'']|} /\
                     unlabeled_value v <> unlabeled_value v' /\
                     ~ (conf l'') <=lv (conf a) /\
@@ -1395,7 +1395,7 @@ Definition if_closure_e_ctx (R : R) (a : slabel) (t : stype) (r' : tvr_raw) : Pr
         ) /\
         r' = {|V1 := ((e_ctx_to_tm E).[up sigma]).[up sigma0]; V2 := ((e_ctx_to_tm E').[up sigma']).[up sigma0']; Rtype := s|}.
 
-Lemma condition_if_closure_e_ctx : forall (R : R) (a : slabel) (t : stype) (r' : tvr_raw),
+Lemma condition_if_closure_e_ctx : forall (R : TVR) (a : slabel) (t : stype) (r' : tvr_elm_raw),
     if_closure_e_ctx R a t r' ->
     condition_tvr_weak_ctx t r'.
 Proof.
@@ -1417,7 +1417,7 @@ Proof.
         apply H6.
 Qed.
 
-Lemma condition_x_if_E : forall (a : slabel) (R : R) (q : quadraple) (E E' : e_ctx) (s : stype),
+Lemma condition_x_if_E : forall (a : slabel) (R : TVR) (q : quadraple) (E E' : e_ctx) (s : stype),
     if_closure_e_ctx q.(quad).(Rx) a q.(quad).(Xtype) {|V1 := e_ctx_to_tm E; V2 := e_ctx_to_tm E'; Rtype := s|} ->
     condition_quad {|Rx := R; M1 := (fill E q.(quad).(M1)); M2 := (fill E' q.(quad).(M2)); Xtype := s|}.
 Proof.
@@ -1429,7 +1429,7 @@ Proof.
     split; eauto using type_preservation_closed_context.
 Qed.
 
-Lemma condition_x_if_Ep : forall (a : slabel) (R : R) (r : tvr) (q1 q2 : quadraple) (E E' : e_ctx) (s : stype) (u : utype) (l lb : slabel),
+Lemma condition_x_if_Ep : forall (a : slabel) (R : TVR) (r : tvr_elm) (q1 q2 : quadraple) (E E' : e_ctx) (s : stype) (u : utype) (l lb : slabel),
     q1.(quad).(Xtype) = [u @ty l] -> 
     q2.(quad).(Xtype) = [u @ty l] ->
     r.(tri).(Rtype) = [Bool @ty lb] ->
@@ -1482,7 +1482,7 @@ Proof.
         apply t_prot. apply H.
 Qed.
 
-Lemma condition_x_if_Ep_shift : forall (a : slabel) (R : R) (r : tvr) (q1 q2 : quadraple) (E1 E2 : e_ctx) (s : stype) (u : utype) (l lb k1 k2 : slabel) (m1 m2 : tm),
+Lemma condition_x_if_Ep_shift : forall (a : slabel) (R : TVR) (r : tvr_elm) (q1 q2 : quadraple) (E1 E2 : e_ctx) (s : stype) (u : utype) (l lb k1 k2 : slabel) (m1 m2 : tm),
     q1.(quad).(M1) = tm_prot k1 (m1) ->
     q2.(quad).(M2) = tm_prot k2 (m2) ->
     q1.(quad).(Xtype) = [u @ty l] ->
@@ -1526,20 +1526,20 @@ Proof.
 Qed.
 
 (* Definition 14 *)
-Inductive X_if_closure (X : X) (a : slabel) : elm -> Prop :=
+Inductive X_if_closure (X : ER) (a : slabel) : elm -> Prop :=
     | x_if_X     : forall (e : elm),
         X e -> X_if_closure X a e
-    | x_if_R     : forall (R RS : R),
-        X (elm_tvr RS) ->
+    | x_if_R     : forall (R RS : TVR),
+        X (elm_R RS) ->
         (
-            forall (r : tvr),
+            forall (r : tvr_elm),
                 R r -> if_closure RS a r
         ) ->
-        X_if_closure X a (elm_tvr R)
-    | x_if_M     : forall (R RS : R) (rm : tvr_raw),
-        X (elm_tvr RS) ->
+        X_if_closure X a (elm_R R)
+    | x_if_M     : forall (R RS : TVR) (rm : tvr_elm_raw),
+        X (elm_R RS) ->
         (
-            forall (r : tvr),
+            forall (r : tvr_elm),
                 R r -> if_closure RS a r
         ) ->
         forall (H : if_closure_tm RS a rm),
@@ -1549,10 +1549,10 @@ Inductive X_if_closure (X : X) (a : slabel) : elm -> Prop :=
                     quad := {|Rx := R; M1 := rm.(V1); M2 := rm.(V2); Xtype := rm.(Rtype)|};
                     Xcondition := condition_if_closure_tm RS a rm H
                 |})
-    | x_if_E    : forall (R : R) (q : quadraple) (E E' : e_ctx) (s : stype),
+    | x_if_E    : forall (R : TVR) (q : quadraple) (E E' : e_ctx) (s : stype),
         (X_arrow (X_if_closure X a)) q ->
         (
-            forall (r : tvr),
+            forall (r : tvr_elm),
                 R r -> if_closure q.(quad).(Rx) a r
         ) ->
         forall 
@@ -1563,14 +1563,14 @@ Inductive X_if_closure (X : X) (a : slabel) : elm -> Prop :=
                     quad := {|Rx := R; M1 := (fill E q.(quad).(M1)); M2 := (fill E' q.(quad).(M2)); Xtype := s|};
                     Xcondition := condition_x_if_E a R q E E' s H
                 |})
-    | x_if_Ep   : forall (R : R) (q1 q2 : quadraple) (r : tvr) (E1 E2 : e_ctx) (s : stype) (u : utype) (l lb : slabel)
+    | x_if_Ep   : forall (R : TVR) (q1 q2 : quadraple) (r : tvr_elm) (E1 E2 : e_ctx) (s : stype) (u : utype) (l lb : slabel)
         (Hq1c   : (X_arrow (X_if_closure X a)) q1)
         (Hq2c   : (X_arrow (X_if_closure X a)) q2)
         (HRxe   : q1.(quad).(Rx) = q2.(quad).(Rx))
         (Hq1t   : q1.(quad).(Xtype) = [u @ty l]) 
         (Hq2t   : q2.(quad).(Xtype) = [u @ty l])
         (HRSif  :
-            forall (r : tvr),
+            forall (r : tvr_elm),
                 R r -> if_closure q1.(quad).(Rx) a r
         )
         (Hr     : upward_closure q1.(quad).(Rx) r)
@@ -1585,7 +1585,7 @@ Inductive X_if_closure (X : X) (a : slabel) : elm -> Prop :=
                     Xcondition := condition_x_if_Ep a R r q1 q2 E1 E2 s u l lb Hq1t Hq2t Hrt Hctx
                 |}
             )
-    | x_if_Ep_shift : forall (R : R) (q1 q2 : quadraple) (r : tvr) (E1 E2 : e_ctx) (s : stype) (u : utype) (l lb k1 k2: slabel) (m1 m2 : tm)
+    | x_if_Ep_shift : forall (R : TVR) (q1 q2 : quadraple) (r : tvr_elm) (E1 E2 : e_ctx) (s : stype) (u : utype) (l lb k1 k2: slabel) (m1 m2 : tm)
         (Hq1c   : (X_arrow (X_if_closure X a)) q1)
         (Hq2c   : (X_arrow (X_if_closure X a)) q2)
         (HRxe   : q1.(quad).(Rx) = q2.(quad).(Rx))
@@ -1594,7 +1594,7 @@ Inductive X_if_closure (X : X) (a : slabel) : elm -> Prop :=
         (Hq1t   : q1.(quad).(Xtype) = [u @ty l]) 
         (Hq2t   : q2.(quad).(Xtype) = [u @ty l])
         (HRSif  :
-            forall (r : tvr),
+            forall (r : tvr_elm),
                 R r -> if_closure q1.(quad).(Rx) a r
         )
         (Hr     : upward_closure q1.(quad).(Rx) r)
@@ -1611,7 +1611,7 @@ Inductive X_if_closure (X : X) (a : slabel) : elm -> Prop :=
             ).
 
 
-Definition X_step_quad (X : X) (q : quadraple) : Prop :=
+Definition X_step_quad (X : ER) (q : quadraple) : Prop :=
     exists (q' : quadraple_raw) (q0 : quadraple) (m : tm)
     (Hx     : X (elm_quad q0))
     (Ht     : q'.(Xtype) = q0.(quad).(Xtype))
@@ -1626,25 +1626,25 @@ Definition X_step_quad (X : X) (q : quadraple) : Prop :=
             Xcondition := conj Hty1 Hty2
         |}.(quad).
 
-Definition X_step (X : X) (q : quadraple) : Prop :=
+Definition X_step (X : ER) (q : quadraple) : Prop :=
     X_step_quad X q \/ X_arrow_tvr X q.
 
 
-Definition environmental_bisimulation_quadraple (X : X) (a : slabel) (e : elm) : Prop :=
+Definition environmental_bisimulation_quadraple (X : ER) (a : slabel) (e : elm) : Prop :=
     forall (q : quadraple), 
         e = elm_quad q ->
         (X_step (X_if_closure X a)) q.
 
-Definition environmental_bisimulation_R_bool (R : R) (a : slabel) : Prop :=
-    forall (r : tvr),
+Definition environmental_bisimulation_R_bool (R : TVR) (a : slabel) : Prop :=
+    forall (r : tvr_elm),
         R r ->
     exists (l : slabel),
         r.(tri).(Rtype) = [Bool @ty l] ->
         (conf l) <=lv (conf a) /\
         unlabeled_value r.(tri).(V1) = unlabeled_value r.(tri).(V2).
 
-Definition environmental_bisimulation_R_int (R : R) (a : slabel) : Prop :=
-    forall (r1 r2 : tvr),
+Definition environmental_bisimulation_R_int (R : TVR) (a : slabel) : Prop :=
+    forall (r1 r2 : tvr_elm),
         if_closure R a r1 ->
         if_closure R a r2 ->
     exists (l1'' l2'' : slabel),
@@ -1655,17 +1655,17 @@ Definition environmental_bisimulation_R_int (R : R) (a : slabel) : Prop :=
         r1.(tri).(V2) = tm_int l1' i' /\
         r2.(tri).(V1) = tm_int l2 j /\
         r2.(tri).(V2) = tm_int l2 j' /\
-        forall (e : level) (op : Z -> Z -> Z) (r : tvr),
+        forall (e : level) (op : Z -> Z -> Z) (r : tvr_elm),
             e <=lv (integ a) ->
             r.(tri).(V1) = tm_int (l1 |_| l2 |_| {Low, e}) (op i j) ->
             r.(tri).(V2) = tm_int (l1' |_| l2' |_| {Low, e}) (op i' j') ->
             r.(tri).(Rtype) = [Int @ty (l1'' |_| l2'' |_| {Low, e})] ->
             if_closure R a r.
 
-Definition environmental_bisimulation_R_label (R : R) (a : slabel) : Prop :=
-    forall (r : tvr),
+Definition environmental_bisimulation_R_label (R : TVR) (a : slabel) : Prop :=
+    forall (r : tvr_elm),
         R r ->
-    exists (u : utype) (l : slabel) (r0 : tvr),
+    exists (u : utype) (l : slabel) (r0 : tvr_elm),
         r.(tri).(Rtype) = [u @ty l] /\
         forall (c : level), 
             c <=lv (conf l) ->
@@ -1674,12 +1674,12 @@ Definition environmental_bisimulation_R_label (R : R) (a : slabel) : Prop :=
             r0.(tri).(Rtype) = [u @ty {c, integ l}] ->
             if_closure R a r0.
 
-Definition environmental_bisimulation_R_pair (R : R) (a : slabel) : Prop :=
-    forall (r : tvr),
+Definition environmental_bisimulation_R_pair (R : TVR) (a : slabel) : Prop :=
+    forall (r : tvr_elm),
         R r ->
     exists (s1 s2 : stype) (l'' : slabel),
         r.(tri).(Rtype) = [(s1 *s s2) @ty l''] ->
-    exists (v1 v2 v1' v2' : tm) (u1 u2 : utype) (l l' l1 l2 : slabel) (r1 r2 : tvr),
+    exists (v1 v2 v1' v2' : tm) (u1 u2 : utype) (l l' l1 l2 : slabel) (r1 r2 : tvr_elm),
         r.(tri).(V1) = tm_pair l v1 v2 /\
         r.(tri).(V2) = tm_pair l' v1' v2' /\
         s1 = [u1 @ty l1] /\
@@ -1693,24 +1693,24 @@ Definition environmental_bisimulation_R_pair (R : R) (a : slabel) : Prop :=
         if_closure R a r1 /\
         if_closure R a r2.
         
-Definition environmental_bisimulation_R_fun (X : X) (R : R) (a : slabel) : Prop :=
-    forall (r : tvr),
+Definition environmental_bisimulation_R_fun (X : ER) (R : TVR) (a : slabel) : Prop :=
+    forall (r : tvr_elm),
         R r ->
     exists (s1 s2 : stype) (l'' : slabel),
         r.(tri).(Rtype) = [(s1 ->s s2) @ty l''] ->
     exists (m m' : tm) (l l' : slabel),
         r.(tri).(V1) = tm_abs l m s1 /\
         r.(tri).(V2) = tm_abs l' m' s1 /\
-        forall (q : quadraple) (r0 : tvr),
+        forall (q : quadraple) (r0 : tvr_elm),
             if_closure R a r0 ->
             q.(quad).(M1) = tm_prot l m.[r0.(tri).(V1) .: ids] ->
             q.(quad).(M2) = tm_prot l' m'.[r0.(tri).(V2) .: ids] ->
             q.(quad).(Xtype) = s2 ->
             X_arrow (X_if_closure X a) q.
 
-Definition environmental_bisimulation_R (X : X) (a : slabel) (e : elm) : Prop :=
-    forall (R : R),
-        e = elm_tvr R ->
+Definition environmental_bisimulation_R (X : ER) (a : slabel) (e : elm) : Prop :=
+    forall (R : TVR),
+        e = elm_R R ->
         environmental_bisimulation_R_bool R a /\
         environmental_bisimulation_R_int R a /\
         environmental_bisimulation_R_label R a /\
@@ -1718,7 +1718,7 @@ Definition environmental_bisimulation_R (X : X) (a : slabel) (e : elm) : Prop :=
         environmental_bisimulation_R_fun X R a.
 
 (* Definition 15 *)
-Definition environmental_bisimulation (X : X) (a : slabel) : Prop :=
+Definition environmental_bisimulation (X : ER) (a : slabel) : Prop :=
     forall (e : elm),
         X e ->
         environmental_bisimulation_quadraple X a e \/
