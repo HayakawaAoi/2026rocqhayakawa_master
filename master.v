@@ -848,7 +848,7 @@ Proof.
 Qed.
 
 
-Record quadraple_raw :=
+Record quadruple_raw :=
     {
         Rx      : TVR;
         M1      : tm;
@@ -856,21 +856,21 @@ Record quadraple_raw :=
         Xtype   : stype;
     }.
 
-Definition condition_quad (q : quadraple_raw) :=
+Definition condition_quad (q : quadruple_raw) :=
     empty_gamma |- {High, High}, q.(M1) :t q.(Xtype) /\
     empty_gamma |- {High, High}, q.(M2) :t q.(Xtype).
 
 
 (* Definition 7 *)
-Record quadraple :=
+Record quadruple :=
     {
-        quad        : quadraple_raw;
+        quad        : quadruple_raw;
         Xcondition  : condition_quad quad
     }.
 
 Inductive elm : Type :=
     | elm_R     : TVR -> elm
-    | elm_quad  : quadraple -> elm.
+    | elm_quad  : quadruple -> elm.
 
 Definition ER : Type := elm -> Prop.
 
@@ -1268,8 +1268,8 @@ Definition if_closure (R : TVR) (a : slabel) : tvr_elm -> Prop :=
     context_closure (S_if_closure R a) a.
 
 
-Definition X_arrow_quad (X : ER) (q : quadraple) : Prop :=
-    exists (q' : quadraple_raw) (q0 : quadraple)
+Definition X_arrow_quad (X : ER) (q : quadruple) : Prop :=
+    exists (q' : quadruple_raw) (q0 : quadruple)
     (Hx     : X (elm_quad q0))
     (Ht     : q'.(Xtype) = q0.(quad).(Xtype))
     (Hty1   : empty_gamma |- {High, High}, q'.(M1) :t q'.(Xtype))
@@ -1282,8 +1282,8 @@ Definition X_arrow_quad (X : ER) (q : quadraple) : Prop :=
             Xcondition := conj Hty1 Hty2
         |}.(quad).
 
-Definition X_arrow_tvr (X : ER) (q : quadraple) : Prop :=
-    exists (R : TVR) (r : tvr_elm) (q' : quadraple_raw)
+Definition X_arrow_tvr (X : ER) (q : quadruple) : Prop :=
+    exists (R : TVR) (r : tvr_elm) (q' : quadruple_raw)
     (HXR    : X (elm_R R))
     (HRr    : R r)
     (HXRx   : X (elm_R q'.(Rx)))
@@ -1298,7 +1298,7 @@ Definition X_arrow_tvr (X : ER) (q : quadraple) : Prop :=
             Xcondition := conj Hty1 Hty2
         |}.(quad).
 
-Definition X_arrow (X : ER) (q : quadraple) : Prop :=
+Definition X_arrow (X : ER) (q : quadruple) : Prop :=
     X_arrow_quad X q \/ X_arrow_tvr X q.
 
 
@@ -1417,7 +1417,7 @@ Proof.
         apply H6.
 Qed.
 
-Lemma condition_x_if_E : forall (a : slabel) (R : TVR) (q : quadraple) (E E' : e_ctx) (s : stype),
+Lemma condition_x_if_E : forall (a : slabel) (R : TVR) (q : quadruple) (E E' : e_ctx) (s : stype),
     if_closure_e_ctx q.(quad).(Rx) a q.(quad).(Xtype) {|V1 := e_ctx_to_tm E; V2 := e_ctx_to_tm E'; Rtype := s|} ->
     condition_quad {|Rx := R; M1 := (fill E q.(quad).(M1)); M2 := (fill E' q.(quad).(M2)); Xtype := s|}.
 Proof.
@@ -1429,7 +1429,7 @@ Proof.
     split; eauto using type_preservation_closed_context.
 Qed.
 
-Lemma condition_x_if_Ep : forall (a : slabel) (R : TVR) (r : tvr_elm) (q1 q2 : quadraple) (E E' : e_ctx) (s : stype) (u : utype) (l lb : slabel),
+Lemma condition_x_if_Ep : forall (a : slabel) (R : TVR) (r : tvr_elm) (q1 q2 : quadruple) (E E' : e_ctx) (s : stype) (u : utype) (l lb : slabel),
     q1.(quad).(Xtype) = [u @ty l] -> 
     q2.(quad).(Xtype) = [u @ty l] ->
     r.(tri).(Rtype) = [Bool @ty lb] ->
@@ -1482,7 +1482,7 @@ Proof.
         apply t_prot. apply H.
 Qed.
 
-Lemma condition_x_if_Ep_shift : forall (a : slabel) (R : TVR) (r : tvr_elm) (q1 q2 : quadraple) (E1 E2 : e_ctx) (s : stype) (u : utype) (l lb k1 k2 : slabel) (m1 m2 : tm),
+Lemma condition_x_if_Ep_shift : forall (a : slabel) (R : TVR) (r : tvr_elm) (q1 q2 : quadruple) (E1 E2 : e_ctx) (s : stype) (u : utype) (l lb k1 k2 : slabel) (m1 m2 : tm),
     q1.(quad).(M1) = tm_prot k1 (m1) ->
     q2.(quad).(M2) = tm_prot k2 (m2) ->
     q1.(quad).(Xtype) = [u @ty l] ->
@@ -1549,7 +1549,7 @@ Inductive X_if_closure (X : ER) (a : slabel) : elm -> Prop :=
                     quad := {|Rx := R; M1 := rm.(V1); M2 := rm.(V2); Xtype := rm.(Rtype)|};
                     Xcondition := condition_if_closure_tm RS a rm H
                 |})
-    | x_if_E    : forall (R : TVR) (q : quadraple) (E E' : e_ctx) (s : stype),
+    | x_if_E    : forall (R : TVR) (q : quadruple) (E E' : e_ctx) (s : stype),
         (X_arrow (X_if_closure X a)) q ->
         (
             forall (r : tvr_elm),
@@ -1563,7 +1563,7 @@ Inductive X_if_closure (X : ER) (a : slabel) : elm -> Prop :=
                     quad := {|Rx := R; M1 := (fill E q.(quad).(M1)); M2 := (fill E' q.(quad).(M2)); Xtype := s|};
                     Xcondition := condition_x_if_E a R q E E' s H
                 |})
-    | x_if_Ep   : forall (R : TVR) (q1 q2 : quadraple) (r : tvr_elm) (E1 E2 : e_ctx) (s : stype) (u : utype) (l lb : slabel)
+    | x_if_Ep   : forall (R : TVR) (q1 q2 : quadruple) (r : tvr_elm) (E1 E2 : e_ctx) (s : stype) (u : utype) (l lb : slabel)
         (Hq1c   : (X_arrow (X_if_closure X a)) q1)
         (Hq2c   : (X_arrow (X_if_closure X a)) q2)
         (HRxe   : q1.(quad).(Rx) = q2.(quad).(Rx))
@@ -1585,7 +1585,7 @@ Inductive X_if_closure (X : ER) (a : slabel) : elm -> Prop :=
                     Xcondition := condition_x_if_Ep a R r q1 q2 E1 E2 s u l lb Hq1t Hq2t Hrt Hctx
                 |}
             )
-    | x_if_Ep_shift : forall (R : TVR) (q1 q2 : quadraple) (r : tvr_elm) (E1 E2 : e_ctx) (s : stype) (u : utype) (l lb k1 k2: slabel) (m1 m2 : tm)
+    | x_if_Ep_shift : forall (R : TVR) (q1 q2 : quadruple) (r : tvr_elm) (E1 E2 : e_ctx) (s : stype) (u : utype) (l lb k1 k2: slabel) (m1 m2 : tm)
         (Hq1c   : (X_arrow (X_if_closure X a)) q1)
         (Hq2c   : (X_arrow (X_if_closure X a)) q2)
         (HRxe   : q1.(quad).(Rx) = q2.(quad).(Rx))
@@ -1611,8 +1611,8 @@ Inductive X_if_closure (X : ER) (a : slabel) : elm -> Prop :=
             ).
 
 
-Definition X_step_quad (X : ER) (q : quadraple) : Prop :=
-    exists (q' : quadraple_raw) (q0 : quadraple) (m : tm)
+Definition X_step_quad (X : ER) (q : quadruple) : Prop :=
+    exists (q' : quadruple_raw) (q0 : quadruple) (m : tm)
     (Hx     : X (elm_quad q0))
     (Ht     : q'.(Xtype) = q0.(quad).(Xtype))
     (Hty1   : empty_gamma |- {High, High}, q'.(M1) :t q'.(Xtype))
@@ -1626,12 +1626,12 @@ Definition X_step_quad (X : ER) (q : quadraple) : Prop :=
             Xcondition := conj Hty1 Hty2
         |}.(quad).
 
-Definition X_step (X : ER) (q : quadraple) : Prop :=
+Definition X_step (X : ER) (q : quadruple) : Prop :=
     X_step_quad X q \/ X_arrow_tvr X q.
 
 
-Definition environmental_simulation_quadraple (X : ER) (a : slabel) (e : elm) : Prop :=
-    forall (q : quadraple), 
+Definition environmental_simulation_quadruple (X : ER) (a : slabel) (e : elm) : Prop :=
+    forall (q : quadruple), 
         e = elm_quad q ->
         (X_step (X_if_closure X a)) q.
 
@@ -1701,7 +1701,7 @@ Definition environmental_simulation_R_fun (X : ER) (R : TVR) (a : slabel) : Prop
     exists (m m' : tm) (l l' : slabel),
         r.(tri).(V1) = tm_abs l m s1 /\
         r.(tri).(V2) = tm_abs l' m' s1 /\
-        forall (q : quadraple) (r0 : tvr_elm),
+        forall (q : quadruple) (r0 : tvr_elm),
             if_closure R a r0 ->
             q.(quad).(M1) = tm_prot l m.[r0.(tri).(V1) .: ids] ->
             q.(quad).(M2) = tm_prot l' m'.[r0.(tri).(V2) .: ids] ->
@@ -1721,7 +1721,7 @@ Definition environmental_simulation_R (X : ER) (a : slabel) (e : elm) : Prop :=
 Definition environmental_simulation (X : ER) (a : slabel) : Prop :=
     forall (e : elm),
         X e ->
-        environmental_simulation_quadraple X a e \/
+        environmental_simulation_quadruple X a e \/
         environmental_simulation_R X a e.
 
 Definition inversion_TVR (R : TVR) (r : tvr_elm) : Prop :=
@@ -1739,9 +1739,9 @@ Definition inversion_ER (X : ER) (e : elm) : Prop :=
                     X (elm_R R0) /\ R = inversion_TVR R0
     ) \/
     (
-        forall (q : quadraple),
+        forall (q : quadruple),
             e = elm_quad q ->
-                exists (q0 : quadraple),
+                exists (q0 : quadruple),
                     X (elm_quad q0) /\
                     q.(quad).(Rx) = q0.(quad).(Rx) /\
                     q.(quad).(M1) = q0.(quad).(M2) /\
